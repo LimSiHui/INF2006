@@ -35,7 +35,21 @@
 				<tbody>
 					<?php 
 					$i = 1;
-						$qry = $conn->query("SELECT r.*,c.category,c.balance from `running_balance` r inner join `categories` c on r.category_id = c.id where c.status=1 and r.balance_type = 1 order by unix_timestamp(r.date_created) desc");
+						$is_admin = ($_settings->userdata('type') == 1); // Adjust based on your application's logic
+						if ($is_admin) {
+							// Prepare statement for admin
+							$stmt = $conn->prepare("SELECT r.*, c.category, c.balance FROM `running_balance` r INNER JOIN `categories` c ON r.category_id = c.id WHERE c.status = 1 AND r.balance_type = 1 ORDER BY unix_timestamp(r.date_created) DESC");
+						} else {
+							// Prepare statement for non-admin
+							$current_user_id = $_settings->userdata('id'); // Or however you get the current user's ID
+							$stmt = $conn->prepare("SELECT r.*, c.category, c.balance FROM `running_balance` r INNER JOIN `categories` c ON r.category_id = c.id WHERE c.status = 1 AND r.balance_type = 1 AND r.user_id = ? ORDER BY unix_timestamp(r.date_created) DESC");
+							$stmt->bind_param("i", $current_user_id);
+						}
+						$stmt->execute();
+						$qry = $stmt->get_result();
+
+						// $qry = $conn->query("SELECT r.*,c.category,c.balance from `running_balance` r inner join `categories` c on r.category_id = c.id where c.status=1 and r.balance_type = 1 order by unix_timestamp(r.date_created) desc");
+						
 						while($row = $qry->fetch_assoc()):
 							foreach($row as $k=> $v){
 								$row[$k] = trim(stripslashes($v));
